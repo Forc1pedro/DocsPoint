@@ -973,17 +973,20 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
                           <TableCell style={{ width: '36px' }}>
                             {getFileIcon(item)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell
+                            style={{ cursor: item.is_folder ? 'pointer' : 'default' }}
+                            onClick={() => {
+                              if (item.is_folder) {
+                                onOpenFolder(item.id, item.name);
+                              } else {
+                                onSelectDocument(item.id, true);
+                              }
+                            }}
+                          >
                             <TableCellLayout>
                               <span
                                 className={styles.itemName}
-                                onClick={() => {
-                                  if (item.is_folder) {
-                                    onOpenFolder(item.id, item.name);
-                                  } else {
-                                    onSelectDocument(item.id, true);
-                                  }
-                                }}
+                                data-testid={item.is_folder ? 'folder-name-link' : 'file-name-link'}
                               >
                                 {item.name}
                               </span>

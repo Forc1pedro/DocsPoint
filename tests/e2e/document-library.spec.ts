@@ -150,15 +150,17 @@ test.describe('SharePoint Clone — E2E & Integração Ponta a Ponta (Épico 1: 
     await expect(folderItem).toBeVisible({ timeout: 10000 });
 
     // Clicar no nome da pasta para abrir (não no checkbox de seleção)
-    const folderNameLink = folderItem.locator('span').filter({ hasText: /Projetos|Arquitetura|Especificações|Geral/i }).first();
+    const folderNameLink = folderItem.locator('[data-testid="folder-name-link"]').first();
     await folderNameLink.click();
 
-    // Validar Breadcrumb atualizado
+    // Validar Breadcrumb atualizado (com 2 itens: Raiz > Pasta)
     const breadcrumb = page.locator('[aria-label="Navegação na Biblioteca"]').first();
     await expect(breadcrumb).toBeVisible();
+    await expect(breadcrumb.locator('button')).toHaveCount(2, { timeout: 10000 });
 
     // Volta para a raiz pelo Breadcrumb
     const rootBtn = breadcrumb.locator('button').first();
+    await expect(rootBtn).toBeEnabled({ timeout: 5000 });
     await rootBtn.click();
 
     // Confirma que voltou à raiz e a pasta continua visível na listagem
