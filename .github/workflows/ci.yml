@@ -123,9 +123,9 @@ jobs:
             sleep 2
           done
 
-          echo "Waiting for Frontend Web (http://localhost:3000)..."
+          echo "Waiting for Frontend Web (http://localhost:3000/login)..."
           for i in {1..30}; do
-            if curl -s -f http://localhost:3000 > /dev/null; then
+            if curl -s -f -L http://localhost:3000/login > /dev/null; then
               echo "Frontend is healthy!"
               break
             fi
