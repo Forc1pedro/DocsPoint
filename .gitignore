@@ -11,4 +11,5 @@ test-results/
 Thumbs.db
 .agents/
 *.md
+!README.md
 docs/
