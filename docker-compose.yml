@@ -12,8 +12,8 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./database/003_tasks_07_to_16.sql:/docker-entrypoint-initdb.d/02-tasks-07-to-16.sql:ro
+      - ./database/01_base_inicial.sql:/docker-entrypoint-initdb.d/01_base_inicial.sql:ro
+      - ./database/04_recursos_avancados.sql:/docker-entrypoint-initdb.d/04_recursos_avancados.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sharepoint} -d ${POSTGRES_DB:-sharepoint_db}"]
       interval: 10s
