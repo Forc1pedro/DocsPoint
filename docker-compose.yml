@@ -1,0 +1,128 @@
+services:
+  # ----------------- PostgreSQL Relational Database -----------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: sharepoint-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sharepoint}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sp_pass123}
+      POSTGRES_DB: ${POSTGRES_DB:-sharepoint_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sharepoint} -d ${POSTGRES_DB:-sharepoint_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------- MinIO Object Storage (S3 API) ------------------
+  minio:
+    image: pgsty/minio:latest
+    container_name: sharepoint-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ----------------- Redis Cache & Messaging ------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: sharepoint-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------- Meilisearch Engine -----------------------------
+  search:
+    image: getmeili/meilisearch:v1.6
+    container_name: sharepoint-search
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey123}
+      MEILI_ENV: ${MEILI_ENV:-development}
+    ports:
+      - "${MEILISEARCH_PORT:-7700}:7700"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ----------------- Backend API Service ----------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sharepoint-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-sharepoint}:${POSTGRES_PASSWORD:-sp_pass123}@postgres:5432/${POSTGRES_DB:-sharepoint_db}
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=${S3_BUCKET:-sp-documents}
+      - MEILISEARCH_HOST=http://search:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY:-masterKey123}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-sharepoint-clone-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      search:
+        condition: service_healthy
+
+  # ----------------- Frontend Web Application -----------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sharepoint-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+  redis_data:
+    driver: local
+  meili_data:
+    driver: local

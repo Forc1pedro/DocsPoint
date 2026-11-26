@@ -1,0 +1,12 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  transpilePackages: ['@fluentui/react-components', '@fluentui/react-icons'],
+  compiler: {
+    removeConsole: true,
+  },
+};
+
+module.exports = nextConfig;
